@@ -5,6 +5,7 @@ import http.cookiejar
 from PIL import Image
 import json
 from bs4 import BeautifulSoup
+import os
 
 
 class ZhiHuSpider(object):
@@ -88,7 +89,7 @@ class ZhiHuSpider(object):
         '''
         # 打印返回的响应，r = 1代表响应失败，msg里是失败的原因
         # loads可以反序列化内置数据类型，而load可以从文件读取
-        if (json.loads(result.text))["r"] == 1:
+        if json.loads(result.text)["r"] == 1:
             # 要用验证码，post后登录
             data['captcha'] = self.get_captcha()
             result = self.session.post(url, data=data, headers=self.headers)
@@ -164,7 +165,18 @@ class ZhiHuSpider(object):
             response = self.session.get(url, headers=self.headers)
             self.writeFile(str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
             response = json.loads(response.content)
-            self.total = response['paging']['totals']  # 粉丝总数
+
+            try:
+                self.total = response['paging']['totals']  # 粉丝总数
+            except KeyError: # 如果被限流了在这里可以补救一下
+                print(url)
+                print('Error!')
+                response = self.session.get(url, headers=self.headers)
+                os.remove(str(self.record_num) + '.json')
+                self.writeFile(str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+                response = json.loads(response.content)
+                self.total = response['paging']['totals']  # 粉丝总数
+
             isEnd = self.getFollower(response['data'], follower_info, getFollowerContent)
             if isEnd:
                 break
@@ -172,9 +184,8 @@ class ZhiHuSpider(object):
         print('Fetch info end...')
 
         if getFollowerContent:
-            follower_info.insert(0, userId + '\n')
             # 存下来，先把list转成文本
-            followerText = '\n\n'
+            followerText = userId + '\n'
             for text in follower_info:
                 followerText += text
             self.writeFile(userId + '.txt', followerText)
@@ -189,7 +200,7 @@ class ZhiHuSpider(object):
                     name = data['name']
                     follerNum = data['follower_count']
                     headline = data['headline']
-                    follower_info.append(name + '     关注者:' + follerNum + '     个人简介:' + headline)
+                    follower_info.append(name + '     关注者:' + str(follerNum) + '     个人简介:' + headline)
                     follower_info.append('\n')
             # 请求的向后偏移量
             self.offset += len(datas)
@@ -219,9 +230,8 @@ class ZhiHuSpider(object):
         print('Fetch info end...')
 
         if getAnswerContent:
-            answer_info.insert(0, questionId + '\n')
             # 存下来，先把list转成文本
-            answerText='\n\n'
+            answerText = questionId + '\n'
             for text in answer_info:
                 answerText+=text
             self.writeFile(questionId + '.txt', answerText)
