@@ -7,4 +7,4 @@ else:
     account = input('输入账号：')
     secret = input('输入密码：')
     sp.login(account, secret)
-sp.getQsAnswer('306537777')
+sp.getAllAnswer('306537777')

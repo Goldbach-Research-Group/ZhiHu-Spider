@@ -27,6 +27,17 @@ class ZhiHuSpider(object):
         except IOError:
             print('Cookie未加载！')
 
+        # 关于爬取参数的初始化
+        # 每次取的回答数
+        self.limit = 20
+        # 获取答案时的偏移量
+        self.offset = 0
+        # 开始时假设当前有这么多的回答，得到请求后我再解析
+        self.total = 2 * self.limit
+        # 我们当前已记录的回答数量
+        self.record_num = 0
+
+
     def get_xsrf(self): # 获取参数_xsrf
         response = self.session.get('https://www.zhihu.com', headers=self.headers)
         html = response.text
@@ -34,6 +45,7 @@ class ZhiHuSpider(object):
         _xsrf = re.findall(get_xsrf_pattern, html)[0]
 
         return _xsrf
+
 
     def get_captcha(self):
         """
@@ -50,6 +62,7 @@ class ZhiHuSpider(object):
         im.show()
         captcha = input('本次登录需要输入验证码： ')
         return captcha
+
 
     def login(self, username, password): # 输入自己的账号密码，模拟登录知乎
         # 检测到11位数字则是手机登录
@@ -68,7 +81,6 @@ class ZhiHuSpider(object):
                     'email': username
                     }
         result = self.session.post(url, data=data, headers=self.headers)
-        print(result.text) # fix:
         # 读验证码这块不对，先删掉了
         '''
         # 打印返回的响应，r = 1代表响应失败，msg里是失败的原因
@@ -82,6 +94,7 @@ class ZhiHuSpider(object):
         # 保存cookie到本地
         self.session.cookies.save(ignore_discard=True, ignore_expires=True)
 
+
     def isLogin(self):
         # 通过查看用户个人信息来判断是否已经登录
         url = "https://www.zhihu.com/settings/profile"
@@ -92,6 +105,7 @@ class ZhiHuSpider(object):
         else:
             return False
 
+
     def getUserInfo(self, userId): # 获取用户信息，还没用上
         url = 'https://www.zhihu.com/people/' + userId + '/activities'
         response = self.session.get(url, headers=self.headers)
@@ -99,68 +113,77 @@ class ZhiHuSpider(object):
         name = soup.find_all('span', {'class': 'ProfileHeader-name'})[0].string
         return name
 
-    def getQsAnswer(self, questionId):
-        # 每次取的回答数
-        limit = 10
-        # 获取答案时的偏移量
-        offset = 0
-        # 开始时假设当前有这么多的回答，得到请求后我再解析
-        total = 2 * limit
-        # 我们当前已记录的回答数量
-        record_num = 0
+
+    def getAllAnswer(self, questionId):
         # 定义问题的标题，为了避免获取失败，我们在此先赋值
         title = questionId
         # 存储所有的答案信息
         answer_info = []
         print('Fetch info start...')
-        while record_num < total:
+
+        while self.record_num < self.total:
             # 开始获取数据
             # URL：https://www.zhihu.com/api/v4/questions/39162814/answers?sort_by=default&include=data[*].is_normal,content&limit=5&offset=0
             url = 'https://www.zhihu.com/api/v4/questions/' \
                   + questionId + '/answers' \
                                  '?sort_by=default&include=data[*].is_normal,voteup_count,content' \
-                                 '&limit=' + str(limit) + '&offset=' + str(offset)
+                                 '&limit=' + str(self.limit) + '&offset=' + str(self.offset)
             response = self.session.get(url, headers=self.headers)
-            # 返回的信息为json类型
+            self.writeFile(str(self.record_num) + '.json', response.content.decode()) # 把网页存下来
             response = json.loads(response.content)
-            # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
-            # 我们先来看下总共有多少回答
-            total = response['paging']['totals']
-            # 本次请求返回的实体信息数组
-            datas = response['data']
-            # 遍历信息并记录
-            if datas is not None:
-                if total <= 0:
-                    break
-                for data in datas:
-                    dr = re.compile(r'<[^>]+>', re.S)
-                    content = dr.sub('', data['content'])
-                    answer = data['author']['name'] + ' ' + str(data['voteup_count']) + ' 人点赞' + '\n'
-                    answer = answer + 'Answer:' + content + '\n'
-                    answer_info.append('\n')
-                    answer_info.append(answer)
-                    answer_info.append('\n')
-                    answer_info.append('------------------------------')
-                    answer_info.append('\n')
-                    # 获取问题的title
-                    title = data['question']['title']
-                # 请求的向后偏移量
-                offset += len(datas)
-                record_num += len(datas)
-                # 如果获取的数组size小于limit,循环结束
-                if len(datas) < limit:
-                    break
+            # title = self.getTitle(response)
+            isEnd = self.getAnswer(response, answer_info)
+            if isEnd:
+                break
 
         print('Fetch info end...')
         answer_info.insert(0, title + '\n')
-        self.write2File(title + '.txt', answer_info)
 
-    def write2File(self, filePath, answerInfo):
+        # 把回答存下来，先把list转成文本
+        answerText='\n\n'
+        for text in answer_info:
+            answerText+=text
+        self.writeFile(questionId + '.txt', answerText)
+
+
+    def getTitle(self,response):
+        datas = response['data']
+        return datas[0]['question']['title']
+
+
+    def getAnswer(self,response,answer_info):
+        # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
+        # 我们先来看下总共有多少回答
+        self.total = response['paging']['totals']
+        # 本次请求返回的实体信息数组
+        datas = response['data']
+        # 遍历信息并记录
+        if datas is not None:
+            if self.total <= 0:
+                return True
+            for data in datas:
+                dr = re.compile(r'<[^>]+>', re.S)
+                content = dr.sub('', data['content'])
+                answer = data['author']['name'] + ' ' + str(data['voteup_count']) + ' 人点赞' + '\n'
+                answer = answer + 'Answer:' + content + '\n'
+                answer_info.append('\n')
+                answer_info.append(answer)
+                answer_info.append('\n')
+                answer_info.append('------------------------------')
+                answer_info.append('\n')
+                # title = data['question']['title'] # 获取title单独挪出去了
+            # 请求的向后偏移量
+            self.offset += len(datas)
+            self.record_num += len(datas)
+            # 如果获取的数组size小于limit,循环结束
+            if len(datas) < self.limit:
+                return True
+        return False
+
+
+    def writeFile(self, filePath, content):
         print('Write info to file:Start...')
         # 将文件内容写到文件中
         with open(filePath, 'a', encoding='utf-8') as f:
-            f.writelines('\n\n')
-            for text in answerInfo:
-                f.writelines(text)
-            f.writelines('\n\n')
+            f.write(content)
             print('Write info to file:end...')
