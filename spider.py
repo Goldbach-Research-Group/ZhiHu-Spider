@@ -114,7 +114,7 @@ class ZhiHuSpider(object):
         return name
 
 
-    def getAllAnswer(self, questionId):
+    def getAllAnswer(self, questionId, getAnswerContent=False):
         # 定义问题的标题，为了避免获取失败，我们在此先赋值
         title = questionId
         # 存储所有的答案信息
@@ -132,7 +132,7 @@ class ZhiHuSpider(object):
             self.writeFile(str(self.record_num) + '.json', response.content.decode()) # 把网页存下来
             response = json.loads(response.content)
             # title = self.getTitle(response)
-            isEnd = self.getAnswer(response, answer_info)
+            isEnd = self.getAnswer(response, answer_info, getAnswerContent)
             if isEnd:
                 break
 
@@ -151,7 +151,7 @@ class ZhiHuSpider(object):
         return datas[0]['question']['title']
 
 
-    def getAnswer(self,response,answer_info):
+    def getAnswer(self,response,answer_info, getAnswerContent=False):
         # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
         # 我们先来看下总共有多少回答
         self.total = response['paging']['totals']
@@ -161,17 +161,17 @@ class ZhiHuSpider(object):
         if datas is not None:
             if self.total <= 0:
                 return True
-            for data in datas:
-                dr = re.compile(r'<[^>]+>', re.S)
-                content = dr.sub('', data['content'])
-                answer = data['author']['name'] + ' ' + str(data['voteup_count']) + ' 人点赞' + '\n'
-                answer = answer + 'Answer:' + content + '\n'
-                answer_info.append('\n')
-                answer_info.append(answer)
-                answer_info.append('\n')
-                answer_info.append('------------------------------')
-                answer_info.append('\n')
-                # title = data['question']['title'] # 获取title单独挪出去了
+            if getAnswerContent: # 如果不抓取回答内容就不动answer_info，这个函数只做计数作用
+                for data in datas:
+                    dr = re.compile(r'<[^>]+>', re.S)
+                    content = dr.sub('', data['content'])
+                    answer = data['author']['name'] + ' ' + str(data['voteup_count']) + ' 人点赞' + '\n'
+                    answer = answer + 'Answer:' + content + '\n'
+                    answer_info.append('\n')
+                    answer_info.append(answer)
+                    answer_info.append('\n')
+                    answer_info.append('------------------------------')
+                    answer_info.append('\n')
             # 请求的向后偏移量
             self.offset += len(datas)
             self.record_num += len(datas)
