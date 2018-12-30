@@ -36,7 +36,7 @@ class ZhiHuSpider(object):
         # 获取答案时的偏移量
         self.offset = 0
         # 开始时假设当前有这么多的回答，得到请求后我再解析
-        self.total = 2 * self.limit
+        self.total = 1
         # 我们当前已记录的回答数量
         self.record_num = 0
 
@@ -108,6 +108,44 @@ class ZhiHuSpider(object):
         else:
             return False
 
+    def getAnswerUrl(self, questionId):
+        # URL：https://www.zhihu.com/api/v4/questions/39162814/answers?sort_by=default&include=data[*].is_normal,content&
+        # limit=20&offset=0
+        return 'https://www.zhihu.com/api/v4/questions/' + \
+                questionId + '/answers' \
+                '?sort_by=default&include=data[*].is_normal,voteup_count,content' \
+                '&limit=' + str(self.limit) + '&offset=' + str(self.offset)
+
+    def getActivitiesUrl(self,userId):
+        # activitiesUrl: https://www.zhihu.com/api/v4/members/yu-ye/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        return 'https://www.zhihu.com/api/v4/members/' + \
+                userId + '/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+                'limit=' + str(self.limit) + '&offset=' + str(self.offset)
+
+    def getAnswersUrl(self,userId):
+        # answersUrl: https://www.zhihu.com/api/v4/members/yu-ye/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        return 'https://www.zhihu.com/api/v4/members/' + \
+                userId + '/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+                'limit=' + str(self.limit) + '&offset=' + str(self.offset)
+
+    def getFollowerUrl(self,userId):
+        # followerUrl: https://www.zhihu.com/api/v4/members/yu-ye/followers?
+        # per_page=20
+        # &include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        return 'https://www.zhihu.com/api/v4/members/' + \
+                userId + '/followers?per_page=' + str(self.limit) + \
+                '&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+                'limit=' + str(self.limit) + '&offset=' + str(self.offset)
+
+    def getFolloweeUrl(self,userId):
+        # followeeUrl: https://www.zhihu.com/api/v4/members/yu-ye/followees?include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        followeeUrl = 'https://www.zhihu.com/api/v4/members/' + \
+                      userId + '/followees?include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+                      'limit=' + str(self.limit) + '&offset=' + str(self.offset)
 
     def getUserName(self, userId): # 获取用户信息，还没用上
         url = 'https://www.zhihu.com/people/' + userId + '/activities'
@@ -117,65 +155,85 @@ class ZhiHuSpider(object):
         name = soup.find_all('span', {'class': 'ProfileHeader-name'})[0].string
         return name
 
-    def getUserInfo(self,userId):
-        # activitiesUrl: https://www.zhihu.com/api/v4/members/yu-ye/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
-        # limit=20&offset=0
-        activitiesUrl = 'https://www.zhihu.com/api/v4/members/' + \
-            userId + '/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
-            'limit=' + str(self.limit) + '&offset=' + str(self.offset)
-        # answersUrl: https://www.zhihu.com/api/v4/members/yu-ye/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
-        # limit=20&offset=0
-        answersUrl = 'https://www.zhihu.com/api/v4/members/' + \
-            userId + '/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
-            'limit=' + str(self.limit) + '&offset=' + str(self.offset)
-        # followerUrl: https://www.zhihu.com/api/v4/members/yu-ye/followers?
-        # per_page=20
-        # &include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
-        # limit=20&offset=0
+    def getAllFollower(self,userId, getFollowerContent=False):
+        follower_info = []
+        print('Fetch info start...')
+
+        while self.record_num < self.total:
+            url = self.getFollowerUrl(userId)
+            response = self.session.get(url, headers=self.headers)
+            self.writeFile(str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+            response = json.loads(response.content)
+            self.total = response['paging']['totals']  # 粉丝总数
+            isEnd = self.getFollower(response['data'], follower_info, getFollowerContent)
+            if isEnd:
+                break
+
+        print('Fetch info end...')
+
+        if getFollowerContent:
+            follower_info.insert(0, userId + '\n')
+            # 存下来，先把list转成文本
+            followerText = '\n\n'
+            for text in follower_info:
+                followerText += text
+            self.writeFile(userId + '.txt', followerText)
+        
+    def getFollower(self, datas, follower_info, getFollowerContent=False):
+        # 遍历信息并记录
+        if datas is not None:
+            if self.total <= 0:
+                return True
+            if getFollowerContent: # 如果不抓取回答内容就不动follower_info，这个函数只做计数作用
+                for data in datas:
+                    name = data['name']
+                    follerNum = data['follower_count']
+                    headline = data['headline']
+                    follower_info.append(name + '     关注者:' + follerNum + '     个人简介:' + headline)
+                    follower_info.append('\n')
+            # 请求的向后偏移量
+            self.offset += len(datas)
+            self.record_num += len(datas)
+            # 如果获取的数组size小于limit,循环结束
+            if len(datas) < self.limit:
+                return True
+        return False
+
 
     def getAllAnswer(self, questionId, getAnswerContent=False):
-        # 定义问题的标题，为了避免获取失败，我们在此先赋值
-        title = questionId
         # 存储所有的答案信息
         answer_info = []
         print('Fetch info start...')
 
         while self.record_num < self.total:
-            # 开始获取数据
-            # URL：https://www.zhihu.com/api/v4/questions/39162814/answers?sort_by=default&include=data[*].is_normal,content&limit=5&offset=0
-            url = 'https://www.zhihu.com/api/v4/questions/' \
-                  + questionId + '/answers' \
-                                 '?sort_by=default&include=data[*].is_normal,voteup_count,content' \
-                                 '&limit=' + str(self.limit) + '&offset=' + str(self.offset)
+            url = self.getAnswerUrl(questionId)
             response = self.session.get(url, headers=self.headers)
-            self.writeFile(str(self.record_num) + '.json', response.content.decode()) # 把网页存下来
+            # self.writeFile(str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
             response = json.loads(response.content)
-            # title = self.getTitle(response)
-            isEnd = self.getAnswer(response, answer_info, getAnswerContent)
+            # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
+            self.total = response['paging']['totals'] # 回答总数
+            isEnd = self.getAnswer(response['data'], answer_info, getAnswerContent)
             if isEnd:
                 break
 
         print('Fetch info end...')
-        answer_info.insert(0, title + '\n')
 
-        # 把回答存下来，先把list转成文本
-        answerText='\n\n'
-        for text in answer_info:
-            answerText+=text
-        self.writeFile(questionId + '.txt', answerText)
+        if getAnswerContent:
+            answer_info.insert(0, questionId + '\n')
+            # 存下来，先把list转成文本
+            answerText='\n\n'
+            for text in answer_info:
+                answerText+=text
+            self.writeFile(questionId + '.txt', answerText)
 
 
     def getTitle(self,response):
         datas = response['data']
+        datas = response['data']
         return datas[0]['question']['title']
 
 
-    def getAnswer(self,response,answer_info, getAnswerContent=False):
-        # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
-        # 我们先来看下总共有多少回答
-        self.total = response['paging']['totals']
-        # 本次请求返回的实体信息数组
-        datas = response['data']
+    def getAnswer(self,datas, answer_info, getAnswerContent=False):
         # 遍历信息并记录
         if datas is not None:
             if self.total <= 0:
