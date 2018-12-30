@@ -27,7 +27,10 @@ class ZhiHuSpider(object):
         except IOError:
             print('Cookie未加载！')
 
-        # 关于爬取参数的初始化
+        self.resetPar() # 关于爬取参数的初始化
+
+
+    def resetPar(self):
         # 每次取的回答数
         self.limit = 20
         # 获取答案时的偏移量
@@ -106,13 +109,29 @@ class ZhiHuSpider(object):
             return False
 
 
-    def getUserInfo(self, userId): # 获取用户信息，还没用上
+    def getUserName(self, userId): # 获取用户信息，还没用上
         url = 'https://www.zhihu.com/people/' + userId + '/activities'
         response = self.session.get(url, headers=self.headers)
+        print(response.content)
         soup = BeautifulSoup(response.content, 'lxml')
         name = soup.find_all('span', {'class': 'ProfileHeader-name'})[0].string
         return name
 
+    def getUserInfo(self,userId):
+        # activitiesUrl: https://www.zhihu.com/api/v4/members/yu-ye/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        activitiesUrl = 'https://www.zhihu.com/api/v4/members/' + \
+            userId + '/activities?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+            'limit=' + str(self.limit) + '&offset=' + str(self.offset)
+        # answersUrl: https://www.zhihu.com/api/v4/members/yu-ye/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
+        answersUrl = 'https://www.zhihu.com/api/v4/members/' + \
+            userId + '/answers?per_page=20&include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&' + \
+            'limit=' + str(self.limit) + '&offset=' + str(self.offset)
+        # followerUrl: https://www.zhihu.com/api/v4/members/yu-ye/followers?
+        # per_page=20
+        # &include=data%5B%2A%5D.answer_count%2Carticles_count%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F%28type%3Dbest_answerer%29%5D.topics&
+        # limit=20&offset=0
 
     def getAllAnswer(self, questionId, getAnswerContent=False):
         # 定义问题的标题，为了避免获取失败，我们在此先赋值
