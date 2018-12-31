@@ -162,7 +162,7 @@ class ZhiHuSpider(object):
         while self.record_num < self.total:
             url = self.getFollowerUrl(userId)
             response = self.session.get(url, headers=self.headers)
-            self.writeFile(str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+            self.writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
             response = json.loads(response.content)
 
             try:
@@ -172,7 +172,7 @@ class ZhiHuSpider(object):
                 print('Error!')
                 response = self.session.get(url, headers=self.headers)
                 os.remove(str(self.record_num) + '.json')
-                self.writeFile(str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+                self.writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
                 response = json.loads(response.content)
                 self.total = response['paging']['totals']  # 粉丝总数
 
@@ -218,7 +218,7 @@ class ZhiHuSpider(object):
         while self.record_num < self.total:
             url = self.getAnswerUrl(questionId)
             response = self.session.get(url, headers=self.headers)
-            # self.writeFile(str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
+            self.writeFile(questionId + str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
             response = json.loads(response.content)
             # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
             self.total = response['paging']['totals'] # 回答总数
