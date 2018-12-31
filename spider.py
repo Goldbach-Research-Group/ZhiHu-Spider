@@ -7,7 +7,6 @@ import json
 from bs4 import BeautifulSoup
 import os
 
-
 class ZhiHuSpider(object):
     def __init__(self):
         self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 '

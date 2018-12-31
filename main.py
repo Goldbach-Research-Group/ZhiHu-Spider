@@ -8,5 +8,5 @@ else:
     secret = input('输入密码：')
     sp.login(account, secret)
 
-sp.getAllAnswer('306537777')
+sp.getAllAnswer('306537777', True)
 sp.getAllFollower('shi-kong-23-21', True)
