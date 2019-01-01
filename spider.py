@@ -5,7 +5,21 @@ import http.cookiejar
 from PIL import Image
 import json
 from bs4 import BeautifulSoup
-import os
+
+def writeFile(filePath, content):
+    print('Write info to file:Start...')
+    # 将文件内容写到文件中
+    with open(filePath, 'a', encoding='utf-8') as f:
+        f.write(content)
+        print('Write info to file:end...')
+
+def catchBan(tryFun):
+    ajson, ansResponse = tryFun()
+    if "error" in ajson:
+        print("Error!")
+        return tryFun()
+    else:
+        return ajson, ansResponse
 
 class ZhiHuSpider(object):
     def __init__(self):
@@ -161,22 +175,14 @@ class ZhiHuSpider(object):
 
         while self.record_num < self.total:
             url = self.getFollowerUrl(userId)
-            response = self.session.get(url, headers=self.headers)
-            self.writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
-            response = json.loads(response.content)
-
-            try:
-                self.total = response['paging']['totals']  # 粉丝总数
-            except KeyError: # 如果被限流了在这里可以补救一下
-                print(url)
-                print('Error!')
+            def tryFun():
                 response = self.session.get(url, headers=self.headers)
-                os.remove(str(self.record_num) + '.json')
-                self.writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
-                response = json.loads(response.content)
-                self.total = response['paging']['totals']  # 粉丝总数
-
-            isEnd = self.getFollower(response['data'], follower_info, getFollowerContent)
+                ajson = json.loads(response.content)
+                return ajson,response
+            ajson, response = catchBan(tryFun)
+            writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+            self.total = ajson['paging']['totals']  # 粉丝总数
+            isEnd = self.getFollower(ajson['data'], follower_info, getFollowerContent)
             if isEnd:
                 break
 
@@ -187,7 +193,7 @@ class ZhiHuSpider(object):
             followerText = userId + '\n'
             for text in follower_info:
                 followerText += text
-            self.writeFile(userId + '.txt', followerText)
+            writeFile(userId + '.txt', followerText)
         
     def getFollower(self, datas, follower_info, getFollowerContent=False):
         # 遍历信息并记录
@@ -217,12 +223,15 @@ class ZhiHuSpider(object):
 
         while self.record_num < self.total:
             url = self.getAnswerUrl(questionId)
-            response = self.session.get(url, headers=self.headers)
-            self.writeFile(questionId + str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
-            response = json.loads(response.content)
+            def tryFun():
+                response = self.session.get(url, headers=self.headers)
+                ajson = json.loads(response.content)
+                return ajson, response
+            ajson, response = catchBan(tryFun)
+            writeFile(questionId + str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
             # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
-            self.total = response['paging']['totals'] # 回答总数
-            isEnd = self.getAnswer(response['data'], answer_info, getAnswerContent)
+            self.total = ajson['paging']['totals'] # 回答总数
+            isEnd = self.getAnswer(ajson['data'], answer_info, getAnswerContent)
             if isEnd:
                 break
 
@@ -233,12 +242,11 @@ class ZhiHuSpider(object):
             answerText = questionId + '\n'
             for text in answer_info:
                 answerText+=text
-            self.writeFile(questionId + '.txt', answerText)
+            writeFile(questionId + '.txt', answerText)
 
 
-    def getTitle(self,response):
-        datas = response['data']
-        datas = response['data']
+    def getTitle(self,ajson):
+        datas = ajson['data']
         return datas[0]['question']['title']
 
 
@@ -265,11 +273,3 @@ class ZhiHuSpider(object):
             if len(datas) < self.limit:
                 return True
         return False
-
-
-    def writeFile(self, filePath, content):
-        print('Write info to file:Start...')
-        # 将文件内容写到文件中
-        with open(filePath, 'a', encoding='utf-8') as f:
-            f.write(content)
-            print('Write info to file:end...')
