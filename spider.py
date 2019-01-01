@@ -180,7 +180,7 @@ class ZhiHuSpider(object):
                 ajson = json.loads(response.content)
                 return ajson,response
             ajson, response = catchBan(tryFun)
-            writeFile(userId + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
+            writeFile(userId + '-' + str(self.record_num) + '.json', response.content.decode())  # 把信息存下来
             self.total = ajson['paging']['totals']  # 粉丝总数
             isEnd = self.getFollower(ajson['data'], follower_info, getFollowerContent)
             if isEnd:
@@ -228,7 +228,7 @@ class ZhiHuSpider(object):
                 ajson = json.loads(response.content)
                 return ajson, response
             ajson, response = catchBan(tryFun)
-            writeFile(questionId + str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
+            writeFile(questionId + '-' + str(self.record_num) + '.json', response.content.decode()) # 把信息存下来
             # 其中的paging实体包含了前一页&下一页的URL，可据此进行循环遍历获取回答的内容
             self.total = ajson['paging']['totals'] # 回答总数
             isEnd = self.getAnswer(ajson['data'], answer_info, getAnswerContent)
