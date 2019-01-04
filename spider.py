@@ -40,7 +40,7 @@ class ZhiHuSpider(object):
             print('Cookie加载成功！')
         except IOError:
             print('Cookie未加载！')
-
+        self.dr = re.compile(r'<[^>]+>', re.S) # 去除HTML提取回答生成摘要用的正则
         self.resetPar() # 关于爬取参数的初始化
 
 
@@ -257,8 +257,7 @@ class ZhiHuSpider(object):
                 return True
             if getAnswerContent: # 如果不抓取回答内容就不动answer_info，这个函数只做计数作用
                 for data in datas:
-                    dr = re.compile(r'<[^>]+>', re.S)
-                    content = dr.sub('', data['content'])
+                    content = self.dr.sub('', data['content'])
                     answer = data['author']['name'] + ' ' + str(data['voteup_count']) + ' 人点赞' + '\n'
                     answer = answer + 'Answer:' + content + '\n'
                     answer_info.append('\n')
